@@ -25,7 +25,14 @@ pub fn is_prime(num: u64) -> bool {
 }
 
 pub fn gen_primes(lim: u64) -> Vec<u64> {
-  (2..=lim).into_par_iter().filter(|x| is_prime(*x)).collect()
+  (2..=lim)
+    .into_par_iter()
+    .filter(|x| {
+      let val = *x;
+
+      (val == 2 || val % 2 == 1) && is_prime(val)
+    })
+    .collect()
 }
 
 pub fn is_palin<T: ToString>(s: T) -> bool {
@@ -45,8 +52,8 @@ pub fn is_palin<T: ToString>(s: T) -> bool {
   true
 }
 
-pub fn gcd(mut a: i128, mut b: i128) -> i128 {
-  let mut r: i128;
+pub fn gcd(mut a: u64, mut b: u64) -> u64 {
+  let mut r: u64;
 
   while b != 0 {
     r = a % b;
@@ -56,8 +63,8 @@ pub fn gcd(mut a: i128, mut b: i128) -> i128 {
   a
 }
 
-pub fn lcm(a: i128, b: i128) -> i128 {
-  let abs_ab = (a * b).abs();
+pub fn lcm(a: u64, b: u64) -> u64 {
+  let abs_ab = a * b;
   abs_ab / gcd(a, b)
 }
 
