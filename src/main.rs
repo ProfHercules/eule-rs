@@ -1,75 +1,112 @@
 use rayon::prelude::*;
-use std::{collections::HashMap, time::Instant};
+use std::{fmt::Display, time::Instant};
 
-type Solution = fn() -> String;
+type Solution<T> = fn() -> T;
+type SolutionResult<T> = Option<(u16, T, u128)>;
 
 mod data;
 mod helpers;
 use data::*;
 use helpers::*;
 
+struct Problem<A: Display + Eq> {
+  pub number: u16,
+  pub answer: Option<A>,
+  pub solution: Option<Solution<A>>,
+}
+
+impl<A: Display + Eq> Problem<A> {
+  pub fn new(number: u16, answer: Option<A>, solution: Option<Solution<A>>) -> Self {
+    Problem {
+      number,
+      answer,
+      solution,
+    }
+  }
+
+  fn time_solution(s: Solution<A>) -> (A, u128) {
+    let start = Instant::now();
+    let result = s();
+    let elapsed = start.elapsed().as_millis();
+    (result, elapsed)
+  }
+
+  pub fn run_timed(&self) -> SolutionResult<A> {
+    if self.solution.is_none() {
+      println!("No solution to run");
+      return None;
+    }
+
+    let (result, elapsed) = Problem::time_solution(self.solution.unwrap());
+
+    if let Some(ans) = &self.answer {
+      if *ans != result {
+        println!(
+          "Problem {: >3}: Incorrect Answer: Expetced {} found {}",
+          self.number, ans, result
+        );
+      }
+    } else {
+      println!("Problem {: >3}: No answer given to check.", self.number);
+    }
+
+    Some((self.number, result, elapsed))
+  }
+}
+
 fn main() {
-  let solutions: Vec<(u16, Solution, &str)> = vec![
-    (1, problem_1, "233168"),
-    (2, problem_2, "4613732"),
-    (3, problem_3, "6857"),
-    (4, problem_4, "906609"),
-    (5, problem_5, "232792560"),
-    (6, problem_6, "25164150"),
-    (7, problem_7, "104743"),
-    (8, problem_8, "23514624000"),
-    (9, problem_9, "31875000"),
-    (10, problem_10, "142913828922"),
-    (11, problem_11, "70600674"),
-    (12, problem_12, "76576500"),
-    (13, problem_13, "5537376230"),
-    (14, problem_14, "837799"),
-    (15, problem_15, "137846528820"),
-    (16, problem_16, "1366"),
-    (17, problem_17, ""),
+  let solutions: Vec<Problem<u64>> = vec![
+    Problem::new(1, Some(233168), Some(problem_1)),
+    Problem::new(2, Some(4613732), Some(problem_2)),
+    Problem::new(3, Some(6857), Some(problem_3)),
+    Problem::new(4, Some(906609), Some(problem_4)),
+    Problem::new(5, Some(232792560), Some(problem_5)),
+    Problem::new(6, Some(25164150), Some(problem_6)),
+    Problem::new(7, Some(104743), Some(problem_7)),
+    Problem::new(8, Some(23514624000), Some(problem_8)),
+    Problem::new(9, Some(31875000), Some(problem_9)),
+    Problem::new(10, Some(142913828922), Some(problem_10)),
+    Problem::new(11, Some(70600674), Some(problem_11)),
+    Problem::new(12, Some(76576500), Some(problem_12)),
+    Problem::new(13, Some(5537376230), Some(problem_13)),
+    Problem::new(14, Some(837799), Some(problem_14)),
+    Problem::new(15, Some(137846528820), Some(problem_15)),
+    Problem::new(16, Some(1366), Some(problem_16)),
+    Problem::new(17, Some(21124), Some(problem_17)),
+    Problem::new(18, Some(1074), Some(problem_18)),
   ];
 
   let sol_len = solutions.len();
 
   let g_start = Instant::now();
-
-  let mut output: Vec<(u16, String, u128)> = solutions
+  println!("-----------------------------------------------");
+  let output: Vec<SolutionResult<_>> = solutions
     .into_par_iter()
-    .map(|(name, solution, ans)| {
-      let start = Instant::now();
-      let res = solution();
-      assert!(res == ans || ans == "");
-      let elapsed = start.elapsed();
+    .map(|problem| problem.run_timed())
+    .collect();
+  println!("-----------------------------------------------");
+  let g_elapsed = g_start.elapsed();
 
-      let d = elapsed.as_millis();
-      (name, res, d)
-    })
+  let mut success_res: Vec<(u16, _, u128)> = output
+    .into_iter()
+    .filter(|r| r.is_some())
+    .map(|r| r.unwrap())
     .collect();
 
-  // let mut unsolved = 0;
-  // for (name, solution, ans) in solutions {
-  //   let start = Instant::now();
+  success_res.sort_by(|a, b| (a.0).partial_cmp(&b.0).unwrap());
 
-  //   let res = solution();
-  //   assert!(res == ans || ans == "");
-  //   let elapsed = start.elapsed();
-  //   println!("{: >11} [ {:.4} sec ] | Answer -> {} ", name, elapsed.as_secs_f64(), res)
-  // }
+  let total_time: u128 = success_res.iter().map(|o| o.2).sum();
 
-  //format!("{:?} = {} - {} seconds", name, res, d)
-
-  let g_elapsed = g_start.elapsed();
-  output.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-
-  let total_time: u128 = output.clone().into_iter().map(|o| o.2).sum();
-
-  output.into_iter().for_each(|(name, result, time)| {
-    let percent = ((time as f64 / total_time as f64) * 100.0).round();
+  println!("| Problem   # | Time ms |  ms % | Result ");
+  println!("-----------------------------------------------");
+  success_res.iter().for_each(|(number, result, duration)| {
+    let percent = ((*duration as f64 / total_time as f64) * 100.0).round();
     println!(
-      "Problem {: >2} [ {: >4} ms | {: >3} % ] | Answer -> {} ",
-      name, time, percent, result
+      "| Problem {: >3} | {: >4} ms | {: >3} % | {: >12}",
+      number, duration, percent, result
     );
   });
+  println!("-----------------------------------------------");
 
   println!(
     "{} solutions in {:?} ms ({} ms raw time)",
@@ -79,7 +116,7 @@ fn main() {
   );
 }
 
-fn problem_1() -> String {
+fn problem_1() -> u64 {
   // find the sum of the multiples of 3 or 5 less than 1000
   let mut result = 0;
 
@@ -89,10 +126,10 @@ fn problem_1() -> String {
     }
   }
 
-  result.to_string()
+  result
 }
 
-fn problem_2() -> String {
+fn problem_2() -> u64 {
   // find the sum of the even valued fibonacci numbers whose values do not exceed 4_000_000
   let mut a = 1;
   let mut b = 2;
@@ -108,50 +145,54 @@ fn problem_2() -> String {
     }
   }
 
-  sum.to_string()
+  sum
 }
 
-fn problem_3() -> String {
+fn problem_3() -> u64 {
   // What is the largest prime factor of the number 600851475143
   const N: u64 = 600851475143;
 
-  let lim: u64 = 600851475143_f64.sqrt().round() as u64;
+  let mut lim: u64 = 600851475143_f64.sqrt().round() as u64;
 
-  let primes = gen_primes(lim);
-
-  for prime in primes.into_iter().rev() {
-    if N % prime == 0 {
-      return prime.to_string();
-    }
+  if lim % 2 == 0 {
+    lim += 1;
   }
-  return String::from("None?");
+
+  while lim > 1 {
+    if N % lim == 0 && is_prime(lim) {
+      return lim;
+    }
+    lim -= 2;
+  }
+  u64::MAX
 }
 
-fn problem_4() -> String {
+fn problem_4() -> u64 {
   // Find the largest palindrome made from the product of two 3-digit numbers
+
   let mut max_prod = 0;
 
-  for i in 100..=999 {
-    for j in 100..=999 {
-      let prod = i * j;
-      if is_palin(prod) && prod > max_prod {
+  for a in 1..=999 {
+    for b in 1..=999 {
+      let prod = a * b;
+      if prod > max_prod && is_palin(prod) {
         max_prod = prod;
       }
     }
   }
-  max_prod.to_string()
+  max_prod
 }
 
-fn problem_5() -> String {
+fn problem_5() -> u64 {
   // What is the smallest positive number that is evenly divisible by all of the numbers from 1 to 20?
   let mut result = 1;
   for i in 1..=20 {
     result = lcm(result, i);
   }
-  result.to_string()
+  result
 }
 
-fn problem_6() -> String {
+fn problem_6() -> u64 {
   // Find the difference between the sum of the squares of the first one hundred natural numbers and the square of the sum.
   let mut sqr_sum = 0;
   let mut sum_sqr = 0;
@@ -163,25 +204,25 @@ fn problem_6() -> String {
 
   sum_sqr = sum_sqr * sum_sqr;
 
-  (sum_sqr - sqr_sum).to_string()
+  sum_sqr - sqr_sum
 }
 
-fn problem_7() -> String {
+fn problem_7() -> u64 {
   // What is the 10 001st prime number?
   let mut prime_count = 0;
-  let mut i = 2;
+  let mut i = 1;
   loop {
     if is_prime(i) {
       prime_count += 1;
     }
     if prime_count == 10_001 {
-      return i.to_string();
+      return i as u64;
     }
-    i += 1
+    i += 2
   }
 }
 
-fn problem_8() -> String {
+fn problem_8() -> u64 {
   // Find the thirteen adjacent digits in the 1000-digit number that have the greatest product. What is the value of this product?
   let kilo_dig = PROBLEM_8_DATA;
 
@@ -197,10 +238,10 @@ fn problem_8() -> String {
       max_prod = *prod;
     }
   }
-  max_prod.to_string()
+  max_prod
 }
 
-fn problem_9() -> String {
+fn problem_9() -> u64 {
   // There exists exactly one Pythagorean triplet for which a + b + c = 1000. Find the product abc.
   for a in 1..=1000 {
     for b in a + 1..=1000 {
@@ -211,20 +252,20 @@ fn problem_9() -> String {
       }
       if a + b + c == 1000 {
         if a * a + b * b == c * c {
-          return (a * b * c).to_string();
+          return a * b * c;
         }
       }
     }
   }
-  "<not found>".to_string()
+  0
 }
 
-fn problem_10() -> String {
+fn problem_10() -> u64 {
   // Find the sum of all the primes below two million.
-  gen_primes(2_000_000).into_iter().sum::<u64>().to_string()
+  gen_primes(2_000_000).into_iter().sum::<u64>()
 }
 
-fn problem_11() -> String {
+fn problem_11() -> u64 {
   // What is the greatest product of four adjacent numbers in the same direction (up, down, left, right, or diagonally) in the 20×20 grid?
   let grid = PROBLEM_11_DATA;
 
@@ -270,36 +311,45 @@ fn problem_11() -> String {
     }
   }
 
-  max_prod.to_string()
+  max_prod
 }
 
-fn problem_12() -> String {
+fn problem_12() -> u64 {
   // What is the value of the first triangle number to have over five hundred divisors?
-  let mut num = 1;
-  let mut next = 2;
+  // let mut num = 1;
+  // let mut next = 2;
 
-  let mut max_f = 0;
+  // let mut max_f = 0;
 
   let primes = gen_primes(12_500);
 
-  loop {
-    // let f_count = factor_count(num);
-    let f_count = factor_count_v2(num, &primes);
+  // loop {
+  //   // let f_count = factor_count(num);
+  //   let f_count = factor_count_v2(num, &primes);
 
-    if f_count > max_f {
-      max_f = f_count;
-    }
+  //   if f_count > max_f {
+  //     max_f = f_count;
+  //   }
 
-    if f_count > 500 {
-      return num.to_string();
-    }
+  //   if f_count > 500 {
+  //     return num;
+  //   }
 
-    num += next;
-    next += 1;
-  }
+  //   num += next;
+  //   next += 1;
+  // }
+
+  let tn = |n: u64| ((n as f64 * 0.5) * (n + 1) as f64).round() as u64;
+
+  tn(
+    (1..12_500u64)
+      .into_par_iter()
+      .find_first(|&n| factor_count_v2(tn(n), &primes) >= 500)
+      .unwrap(),
+  )
 }
 
-fn problem_13() -> String {
+fn problem_13() -> u64 {
   // Work out the first ten digits of the sum of the following one-hundred 50-digit numbers.
   let nums = PROBLEM_13_DATA;
 
@@ -309,47 +359,38 @@ fn problem_13() -> String {
     sum = add_large_nums(sum, nums[i].to_string());
   }
 
-  sum[..10].to_string()
+  sum[..10].parse::<u64>().unwrap()
 }
 
-fn problem_14() -> String {
+fn problem_14() -> u64 {
   // Which starting number, under one million, produces the longest chain?
-  let mut max_chain = 0;
-  let mut max_chain_num = 0;
-
-  let mut chain_lens: HashMap<u64, u64> = HashMap::new();
-
-  for num in 1..1_000_000 {
-    let c_len = collatz_seq_len(num);
-
-    if c_len > max_chain {
-      max_chain = c_len;
-      max_chain_num = num;
-    }
-  }
-
-  max_chain_num.to_string()
+  (1..1_000_000_u64)
+    .into_par_iter()
+    .map(|sn| (sn, collatz_seq_len(sn)))
+    .max_by(|a, b| a.1.cmp(&b.1))
+    .unwrap()
+    .0
 }
 
-fn problem_15() -> String {
+fn problem_15() -> u64 {
   // How many such routes are there through a 20×20 grid?
   const N: u64 = 20;
-  binomial_coefficient(2 * N, N).to_string()
+  binomial_coefficient(2 * N, N)
 }
 
-fn problem_16() -> String {
+fn problem_16() -> u64 {
   let mut val = String::from("1");
-  let mut sum: u128 = 0;
+  let mut sum: u64 = 0;
 
   for _ in 0..=1000 {
-    sum = val.bytes().map(|d| (d - 48) as u128).sum();
+    sum = val.bytes().map(|d| (d - 48) as u64).sum();
     val = add_large_nums(val.clone(), val);
   }
 
-  sum.to_string()
+  sum
 }
 
-fn problem_17() -> String {
+fn problem_17() -> u64 {
   // If all the numbers from 1 to 1000 (one thousand) inclusive were written out in words, how many letters would be used?
   let mut total_letters = 0;
 
@@ -358,5 +399,43 @@ fn problem_17() -> String {
     total_letters += word.len();
   }
 
-  total_letters.to_string()
+  total_letters as u64
+}
+
+/// returns the number of rows in a triangular array of given length
+fn n(t: usize) -> usize {
+  let t8 = 8.0 * t as f64;
+  (0.5 * ((t8 + 1.0).sqrt() - 1.0)).round() as usize
+}
+
+fn find_path(mut arr: Vec<u64>) -> u64 {
+  let last_row_len = n(arr.len());
+  let mut row_len = last_row_len;
+
+  let mut idx_start = arr.len() - last_row_len;
+  let mut idx_end = idx_start + row_len;
+
+  while idx_start > 0 {
+    let mut prev_row_idx = idx_start - row_len + 1;
+
+    for i in idx_start..idx_end - 1 {
+      let max = arr[i].max(arr[i + 1]);
+      let new_val = arr[prev_row_idx] + max;
+
+      // let _ = std::mem::replace(&mut arr[prev_row_idx], new_val);
+      arr[prev_row_idx] = new_val;
+
+      prev_row_idx += 1;
+    }
+
+    row_len -= 1;
+    idx_start -= row_len;
+    idx_end = idx_start + row_len;
+  }
+
+  arr[0]
+}
+
+fn problem_18() -> u64 {
+  find_path(PROBLEM_18_DATA.to_vec())
 }
