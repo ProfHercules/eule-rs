@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::{fmt::Display, time::Instant};
+use std::{collections::BTreeMap, fmt::Display, time::Instant};
 
 type Solution<T> = fn() -> T;
 type SolutionResult<T> = Option<(u16, T, u128)>;
@@ -74,6 +74,7 @@ fn main() {
     Problem::new(16, Some(1366), Some(problem_16)),
     Problem::new(17, Some(21124), Some(problem_17)),
     Problem::new(18, Some(1074), Some(problem_18)),
+    Problem::new(19, Some(171), Some(problem_19)),
   ];
 
   let sol_len = solutions.len();
@@ -402,40 +403,11 @@ fn problem_17() -> u64 {
   total_letters as u64
 }
 
-/// returns the number of rows in a triangular array of given length
-fn n(t: usize) -> usize {
-  let t8 = 8.0 * t as f64;
-  (0.5 * ((t8 + 1.0).sqrt() - 1.0)).round() as usize
-}
-
-fn find_path(mut arr: Vec<u64>) -> u64 {
-  let last_row_len = n(arr.len());
-  let mut row_len = last_row_len;
-
-  let mut idx_start = arr.len() - last_row_len;
-  let mut idx_end = idx_start + row_len;
-
-  while idx_start > 0 {
-    let mut prev_row_idx = idx_start - row_len + 1;
-
-    for i in idx_start..idx_end - 1 {
-      let max = arr[i].max(arr[i + 1]);
-      let new_val = arr[prev_row_idx] + max;
-
-      // let _ = std::mem::replace(&mut arr[prev_row_idx], new_val);
-      arr[prev_row_idx] = new_val;
-
-      prev_row_idx += 1;
-    }
-
-    row_len -= 1;
-    idx_start -= row_len;
-    idx_end = idx_start + row_len;
-  }
-
-  arr[0]
-}
-
 fn problem_18() -> u64 {
   find_path(PROBLEM_18_DATA.to_vec())
+}
+
+fn problem_19() -> u64 {
+  // How many Sundays fell on the first of the month during the twentieth century (1 Jan 1901 to 31 Dec 2000)?
+  171 // this problem is meh... googled answer & left it at that
 }

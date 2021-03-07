@@ -1,4 +1,4 @@
-#![deny(dead_code)]
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 
@@ -230,4 +230,38 @@ pub fn num_to_word(mut num: u64) -> String {
   }
 
   result.to_string()
+}
+
+/// returns the number of rows in a triangular array of given length
+fn n(t: usize) -> usize {
+  let t8 = 8.0 * t as f64;
+  (0.5 * ((t8 + 1.0).sqrt() - 1.0)).round() as usize
+}
+
+pub fn find_path(mut arr: Vec<u64>) -> u64 {
+  let last_row_len = n(arr.len());
+  let mut row_len = last_row_len;
+
+  let mut idx_start = arr.len() - last_row_len;
+  let mut idx_end = idx_start + row_len;
+
+  while idx_start > 0 {
+    let mut prev_row_idx = idx_start - row_len + 1;
+
+    for i in idx_start..idx_end - 1 {
+      let max = arr[i].max(arr[i + 1]);
+      let new_val = arr[prev_row_idx] + max;
+
+      // let _ = std::mem::replace(&mut arr[prev_row_idx], new_val);
+      arr[prev_row_idx] = new_val;
+
+      prev_row_idx += 1;
+    }
+
+    row_len -= 1;
+    idx_start -= row_len;
+    idx_end = idx_start + row_len;
+  }
+
+  arr[0]
 }
