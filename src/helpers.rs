@@ -1,6 +1,7 @@
-#![allow(dead_code)]
-
-use std::collections::HashMap;
+use std::{
+  collections::HashMap,
+  ops::{Index, Mul, Sub},
+};
 
 use rayon::prelude::*;
 
@@ -264,4 +265,21 @@ pub fn find_path(mut arr: Vec<u64>) -> u64 {
   }
 
   arr[0]
+}
+
+pub fn fac(n: u64) -> u64 {
+  if n == 1 {
+    return 1;
+  }
+  n * fac(n - 1)
+}
+
+pub fn dig_sum(mut num: u64) -> u64 {
+  let mut sum = 0;
+
+  while num > 0 {
+    sum += num % 10;
+    num /= 10;
+  }
+  sum
 }

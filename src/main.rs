@@ -1,5 +1,10 @@
 use rayon::prelude::*;
-use std::{collections::BTreeMap, fmt::Display, time::Instant};
+use std::{
+  collections::{BTreeMap, HashSet},
+  fmt::Display,
+  fs,
+  time::Instant,
+};
 
 type Solution<T> = fn() -> T;
 type SolutionResult<T> = Option<(u16, T, u128)>;
@@ -56,25 +61,30 @@ impl<A: Display + Eq> Problem<A> {
 
 fn main() {
   let solutions: Vec<Problem<u64>> = vec![
-    Problem::new(1, Some(233168), Some(problem_1)),
-    Problem::new(2, Some(4613732), Some(problem_2)),
-    Problem::new(3, Some(6857), Some(problem_3)),
-    Problem::new(4, Some(906609), Some(problem_4)),
-    Problem::new(5, Some(232792560), Some(problem_5)),
-    Problem::new(6, Some(25164150), Some(problem_6)),
-    Problem::new(7, Some(104743), Some(problem_7)),
-    Problem::new(8, Some(23514624000), Some(problem_8)),
-    Problem::new(9, Some(31875000), Some(problem_9)),
-    Problem::new(10, Some(142913828922), Some(problem_10)),
-    Problem::new(11, Some(70600674), Some(problem_11)),
-    Problem::new(12, Some(76576500), Some(problem_12)),
-    Problem::new(13, Some(5537376230), Some(problem_13)),
-    Problem::new(14, Some(837799), Some(problem_14)),
-    Problem::new(15, Some(137846528820), Some(problem_15)),
-    Problem::new(16, Some(1366), Some(problem_16)),
-    Problem::new(17, Some(21124), Some(problem_17)),
-    Problem::new(18, Some(1074), Some(problem_18)),
+    Problem::new(01, Some(233_168), Some(problem_1)),
+    Problem::new(02, Some(4_613_732), Some(problem_2)),
+    Problem::new(03, Some(6_857), Some(problem_3)),
+    Problem::new(04, Some(906_609), Some(problem_4)),
+    Problem::new(05, Some(232_792_560), Some(problem_5)),
+    Problem::new(06, Some(25_164_150), Some(problem_6)),
+    Problem::new(07, Some(104_743), Some(problem_7)),
+    Problem::new(08, Some(23_514_624_000), Some(problem_8)),
+    Problem::new(09, Some(31_875_000), Some(problem_9)),
+    Problem::new(10, Some(142_913_828_922), Some(problem_10)),
+    Problem::new(11, Some(70_600_674), Some(problem_11)),
+    Problem::new(12, Some(76_576_500), Some(problem_12)),
+    Problem::new(13, Some(5_537_376_230), Some(problem_13)),
+    Problem::new(14, Some(837_799), Some(problem_14)),
+    Problem::new(15, Some(137_846_528_820), Some(problem_15)),
+    Problem::new(16, Some(1_366), Some(problem_16)),
+    Problem::new(17, Some(21_124), Some(problem_17)),
+    Problem::new(18, Some(1_074), Some(problem_18)),
     Problem::new(19, Some(171), Some(problem_19)),
+    Problem::new(20, Some(648), Some(problem_20)),
+    Problem::new(21, Some(31_626), Some(problem_21)),
+    Problem::new(22, Some(871_198_282), Some(problem_22)),
+    Problem::new(23, Some(4_179_871), Some(problem_23)),
+    Problem::new(24, None, Some(problem_24)),
   ];
 
   let sol_len = solutions.len();
@@ -98,12 +108,12 @@ fn main() {
 
   let total_time: u128 = success_res.iter().map(|o| o.2).sum();
 
-  println!("| Problem   # | Time ms |  ms % | Result ");
+  println!("| Problem   # |  Time ms |  ms % | Result ");
   println!("-----------------------------------------------");
   success_res.iter().for_each(|(number, result, duration)| {
     let percent = ((*duration as f64 / total_time as f64) * 100.0).round();
     println!(
-      "| Problem {: >3} | {: >4} ms | {: >3} % | {: >12}",
+      "| Problem {: >3} | {: >5} ms | {: >3} % | {: >12}",
       number, duration, percent, result
     );
   });
@@ -410,4 +420,118 @@ fn problem_18() -> u64 {
 fn problem_19() -> u64 {
   // How many Sundays fell on the first of the month during the twentieth century (1 Jan 1901 to 31 Dec 2000)?
   171 // this problem is meh... googled answer & left it at that
+}
+
+use bignum::BigUint;
+
+fn big_dig_sum(mut bn: BigUint) -> u64 {
+  let mut sum = 0;
+
+  while bn > 0 {
+    let (q, r) = bn.divmod(10);
+    sum += r as u64;
+    bn = q;
+  }
+
+  sum
+}
+
+fn problem_20() -> u64 {
+  // Find the sum of the digits in the number 100!
+
+  let mut num = BigUint::from(1);
+
+  for i in 2..=100 {
+    num = num * i;
+  }
+
+  big_dig_sum(num)
+}
+
+fn prop_divisor_sum(n: u64) -> u64 {
+  (1..n).into_par_iter().filter(|i| n % i == 0).sum()
+}
+
+fn problem_21() -> u64 {
+  let mut nums = HashSet::new();
+
+  for a in 1..10_000 {
+    let b = prop_divisor_sum(a);
+
+    if a == b {
+      continue;
+    }
+
+    if prop_divisor_sum(b) == a {
+      nums.insert(a);
+      nums.insert(b);
+    }
+  }
+
+  nums.iter().sum()
+}
+
+fn problem_22() -> u64 {
+  let contents = fs::read_to_string("p022_names.txt").unwrap();
+  let mut contents: Vec<&str> = contents.split(",").map(|n| &n[1..n.len() - 1]).collect();
+
+  contents.sort();
+
+  let contents: Vec<u64> = contents
+    .into_par_iter()
+    .map(|c| c.bytes().map(|b| (b - 64) as u64).sum())
+    .collect();
+
+  contents
+    .into_par_iter()
+    .enumerate()
+    .map(|(idx, val)| (idx + 1) as u64 * val)
+    .sum()
+}
+
+fn is_abundant(n: u64) -> bool {
+  prop_divisor_sum(n) > n
+}
+
+fn express_as_sum_of_abundant(n: u64, nums: &Vec<u64>) -> Option<(u64, u64)> {
+  if n < 24 {
+    return None;
+  }
+
+  for a in 0..nums.len() {
+    if nums[a] >= n {
+      break;
+    }
+    for b in 0..nums.len() {
+      if nums[b] >= n {
+        break;
+      }
+      if nums[a] + nums[b] == n {
+        return Some((nums[a], nums[b]));
+      }
+    }
+  }
+
+  None
+}
+
+fn problem_23() -> u64 {
+  let mut sum = 0;
+
+  let abundant_numbers: Vec<u64> = (1..=23_123_u64)
+    .into_par_iter()
+    .filter(|n| is_abundant(*n))
+    .collect();
+
+  for i in 1..=23_123_u64 {
+    if express_as_sum_of_abundant(i, &abundant_numbers).is_none() {
+      sum += i;
+    }
+  }
+
+  sum
+}
+
+fn problem_24() -> u64 {
+  0
 }
